@@ -19,6 +19,13 @@ export function Game() {
   const { bot, userColor, plies, viewPly, setView, status } = g
   // The result modal reopens for each new result once dismissed.
   const [closedResult, setClosedResult] = useState<typeof g.result>(null)
+  // Hold the result screen back so a checkmate gets its moment on the board.
+  const [shownResult, setShownResult] = useState<typeof g.result>(null)
+  useEffect(() => {
+    if (!g.result) return
+    const t = setTimeout(() => setShownResult(g.result), g.result.reason === 'checkmate' ? 1800 : 500)
+    return () => clearTimeout(t)
+  }, [g.result])
 
   // Arrow keys mirror the ‹ › buttons: take back, or replay your move.
   useEffect(() => {
@@ -33,6 +40,8 @@ export function Game() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  // Stepped back onto the bot's turn: nothing happens until you press › (or go back further).
+  const paused = status === 'playing' && !g.botThinking && currentFen(plies).split(' ')[1] !== userColor
   const botName = (
     <div className="player-row">
       <div>
@@ -40,6 +49,7 @@ export function Game() {
         <span className="sub">{bot.elo}</span>
       </div>
       {g.botThinking && <span className="thinking">thinking</span>}
+      {paused && <span className="muted">paused · › to continue</span>}
     </div>
   )
   const youName = (
@@ -97,7 +107,9 @@ export function Game() {
         </div>
       </div>
 
-      {status === 'over' && g.result !== closedResult && <ResultModal onClose={() => setClosedResult(g.result)} />}
+      {status === 'over' && g.result === shownResult && g.result !== closedResult && (
+        <ResultModal onClose={() => setClosedResult(g.result)} />
+      )}
     </div>
   )
 }
@@ -106,15 +118,15 @@ export function Game() {
 function Controls() {
   const { plies, puzzle, redo, hint, status, botThinking, userColor, takeback, redoMove, showHint } = useGame()
   const myTurn = status === 'playing' && !botThinking && currentFen(plies).split(' ')[1] === userColor
-  const canBack = !puzzle && plies.some((p) => p.by === 'user')
-  const canForward = !puzzle && redo.length > 0 && myTurn
+  const canBack = !puzzle && plies.length > 0
+  const canForward = !puzzle && redo.length > 0 && !botThinking
   const canHint = !puzzle && myTurn && !hint
   return (
     <div className="controls">
-      <button className="btn icon" onClick={takeback} disabled={!canBack} aria-label="Take back move" title="Take back (←)">
+      <button className="btn icon" onClick={takeback} disabled={!canBack} aria-label="Back a move" title="Back a move (←)">
         ‹
       </button>
-      <button className="btn icon" onClick={redoMove} disabled={!canForward} aria-label="Replay move" title="Replay your move (→)">
+      <button className="btn icon" onClick={redoMove} disabled={!canForward} aria-label="Forward a move" title="Forward a move (→)">
         ›
       </button>
       <button className="btn hint-btn" onClick={showHint} disabled={!canHint}>

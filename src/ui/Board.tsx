@@ -13,7 +13,7 @@ const CHECK = 'radial-gradient(circle, rgba(229,83,61,0.85) 0%, rgba(229,83,61,0
 const HINT = 'rgba(110, 168, 216, 0.55)'
 
 export function Board() {
-  const { plies, viewPly, userColor, status, botThinking, puzzle, hint, userMove } = useGame()
+  const { plies, viewPly, userColor, status, botThinking, puzzle, hint, result, userMove } = useGame()
   const [selected, setSelected] = useState<Square | null>(null)
 
   const live = viewPly === null || viewPly === plies.length - 1
@@ -85,9 +85,17 @@ export function Board() {
     setSelected(myTurn && piece && piece.color === userColor && sq !== selected ? sq : null)
   }
 
+  const mated = live && status === 'over' && result?.reason === 'checkmate' && chess.isCheckmate()
+  const matedKing = mated ? chess.board().flat().find((p) => p && p.type === 'k' && p.color === chess.turn())?.square : undefined
+
   const badge = ratedPly?.rating
   return (
-    <div className={`board-wrap ${puzzle ? 'frozen' : ''}`}>
+    <div className={`board-wrap ${puzzle ? 'frozen' : ''} ${mated ? 'checkmate' : ''}`}>
+      {mated && (
+        <div className={`mate-banner ${result?.winner === 'user' ? 'won' : 'lost'}`}>
+          <span className="display">Checkmate</span>
+        </div>
+      )}
       <Chessboard
         options={{
           id: 'imperium',
@@ -104,10 +112,14 @@ export function Board() {
             !!targetSquare && tryMove(sourceSquare as Square, targetSquare as Square),
           onSquareClick,
           squareRenderer: ({ square, children }) => (
-            <div style={{ width: '100%', height: '100%', position: 'relative', ...styles[square] }}>
+            <div
+              className={square === matedKing ? 'mated' : undefined}
+              style={{ width: '100%', height: '100%', position: 'relative', ...styles[square] }}
+            >
               {children}
               {badge && ratedPly?.to === square && (
                 <span
+                  className="badge"
                   title={badge.cls}
                   style={{
                     position: 'absolute',

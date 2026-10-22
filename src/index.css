@@ -91,7 +91,43 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .controls .icon { width: 56px; font-size: 22px; line-height: 1; padding: 0; }
 .controls .hint-btn { margin-left: auto; padding: 0 16px; }
 
-.board-wrap { touch-action: none; border-radius: 6px; overflow: hidden; transition: box-shadow 0.2s; }
+.board-wrap { touch-action: none; border-radius: 6px; overflow: hidden; transition: box-shadow 0.2s; position: relative; }
+
+/* Checkmate: the king tips over, its square glows, then the board dims and the word fades in. */
+.board-wrap.checkmate::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 20;
+  background: radial-gradient(ellipse at center, rgba(10, 8, 5, 0.25), rgba(10, 8, 5, 0.6));
+  animation: mate-dim 0.9s ease 0.5s both;
+}
+.mated { animation: mate-glow 1.2s ease both; z-index: 3; overflow: visible; }
+.mated > *:not(.badge) { animation: king-topple 0.7s cubic-bezier(0.5, 0, 0.75, 0) 0.15s both; transform-origin: 50% 85%; }
+.mate-banner {
+  position: absolute; inset: 0; z-index: 21; display: grid; place-items: center; pointer-events: none;
+}
+.mate-banner span {
+  font-size: clamp(28px, 7vw, 52px); font-weight: 700; letter-spacing: 0.12em;
+  color: var(--gold); text-shadow: 0 2px 24px rgba(0, 0, 0, 0.7);
+  animation: mate-word 0.9s ease 0.7s both;
+}
+.mate-banner.lost span { color: #e9d9c8; }
+@keyframes king-topple {
+  0% { transform: rotate(0); }
+  70% { transform: rotate(84deg); }
+  85% { transform: rotate(76deg); }
+  100% { transform: rotate(80deg); opacity: 0.85; }
+}
+@keyframes mate-glow {
+  from { box-shadow: inset 0 0 0 0 rgba(229, 83, 61, 0); }
+  to { box-shadow: inset 0 0 26px 6px rgba(229, 83, 61, 0.75); }
+}
+@keyframes mate-dim { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mate-word {
+  from { opacity: 0; transform: translateY(8px) scale(0.96); letter-spacing: 0.3em; }
+  to { opacity: 1; transform: none; letter-spacing: 0.12em; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mated > *:not(.badge), .mate-banner span, .board-wrap.checkmate::after { animation-duration: 0.01s; animation-delay: 0s; }
+}
 .board-wrap.frozen { box-shadow: 0 0 0 3px var(--info), 0 0 24px rgba(110,168,216,0.35); }
 .player-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 2px; font-size: 14px; min-height: 40px; }
 .player-row .who { font-weight: 600; }

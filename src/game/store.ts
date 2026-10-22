@@ -474,14 +474,15 @@ export const useGame = create<State & Actions>((set, get) => {
     },
 
     takeback() {
+      // One move at a time. Stepping back onto the bot's turn pauses the game
+      // there instead of letting the bot move again; › replays its original move.
       const { plies, puzzle } = get()
-      let i = plies.length - 1
-      while (i >= 0 && plies[i].by !== 'user') i--
+      const i = plies.length - 1
       if (i < 0 || puzzle) return
-      const step: RedoStep = { plies: plies.slice(i), log: get().tacticLog.filter((t) => t.ply !== undefined && t.ply >= i) }
+      const step: RedoStep = { plies: [plies[i]], log: get().tacticLog.filter((t) => t.ply === i) }
       truncate(i)
       set((s) => ({ redo: [...s.redo, step] }))
-      void onUserTurn(epoch)
+      if (replay(get().plies).turn() === get().userColor) void onUserTurn(epoch)
     },
 
     playBest(index) {
@@ -515,8 +516,9 @@ export const useGame = create<State & Actions>((set, get) => {
       }))
       const chess = replay(restored)
       if (chess.isGameOver()) finish(chess)
-      else if (chess.turn() !== get().userColor) void botMove(epoch)
-      else void onUserTurn(epoch)
+      else if (chess.turn() === get().userColor) void onUserTurn(epoch)
+      // On the bot's turn, wait for another › if its old reply is next; otherwise it thinks fresh.
+      else if (get().redo.length === 0) void botMove(epoch)
     },
 
     async showHint() {
